@@ -1,0 +1,15 @@
+name: ponderosa_v2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - numpy
+  - pandas
+  - polars
+  - pytest
+  - scikit-learn
+  - scipy
+  - pyyaml
+  - networkx
+  - ipdb
