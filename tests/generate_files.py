@@ -5,12 +5,14 @@ def simple_ibd_segments(kinship: float, id1: str, id2: str, id1_haplotype: list,
 
     segments = []
 
+    chrom_len = 160
+
     for c in range(1, n_chrom + 1):
 
         n_segments = max(1, np.random.poisson(4))
 
         if kinship == 1:
-            boundaries = np.linspace(0, 100, n_segments + 1)
+            boundaries = np.linspace(0, chrom_len, n_segments + 1)
 
             for i in range(n_segments):
                 start, end = boundaries[[i,i+1]]
@@ -20,11 +22,11 @@ def simple_ibd_segments(kinship: float, id1: str, id2: str, id1_haplotype: list,
 
             continue
 
-        actual_cm = np.random.normal(kinship, kinship / 5) * 100
+        actual_cm = np.random.normal(kinship, kinship / 5) * chrom_len
 
         seg_len = actual_cm / n_segments
 
-        boundaries = np.linspace(0, 100, n_segments + 1)
+        boundaries = np.linspace(0, chrom_len, n_segments + 1)
 
         for i in range(n_segments):
             start, end = boundaries[[i,i+1]]
