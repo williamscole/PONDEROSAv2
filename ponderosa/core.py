@@ -2,7 +2,7 @@
 from .config import PonderosaConfig, OutputConfig
 from .data_loading import load_individuals, load_pairs
 from .pedigree import build_pedigree, PedigreeHierarchy
-from .classifiers import train_load_classifiers, test_classifiers
+from .classifiers import train_load_classifiers, run_inference
 
 
 def run_ponderosa(config: PonderosaConfig):
@@ -25,7 +25,7 @@ def run_ponderosa(config: PonderosaConfig):
                                          config.output.output)
 
     # Use the classifiers and compute posterior probability
-    matrix_hierarchy = test_classifiers(pairs, classifiers, hierarchy)
+    matrix_hierarchy = run_inference(pairs, classifiers, hierarchy)
 
     # Write out results
 

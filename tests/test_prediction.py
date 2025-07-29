@@ -133,5 +133,7 @@ class TestMatrixHierarchy:
         assert np.allclose(exp_prob, prob, atol=1e-4)
         assert np.array_equal(exp_pred, pred)
 
+        import pytest; pytest.set_trace()
+
 
 

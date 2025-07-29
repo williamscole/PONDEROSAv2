@@ -65,6 +65,12 @@ def generate_simple_segments_for(rel_type, id1, id2):
         segments2 = simple_ibd_segments(0.25, id1, id2, [1], [1])
         segments = np.vstack((segments1, segments2))
 
+    elif rel_type == "self":
+        # Paremeterized with an expected kinship of 0.045
+        segments = simple_ibd_segments(np.random.beta(4.05, 85.9), id1, id2, [0], [1])
+        mask = np.random.random(segments.shape[0]) < 0.4
+        segments = segments[mask]
+
     return segments
 
 
@@ -84,6 +90,8 @@ class GeneratePairs:
             3: [70, 90]
         }
 
+        self.cur_fam = 1
+
     def _new_pair(self):
         self.id_index += 2
         return f"ID{self.id_index-2}", f"ID{self.id_index-1}"
@@ -99,7 +107,7 @@ class GeneratePairs:
         return np.random.randint(*self.generation_ages[gen])
 
     def add_fam_line(self, iid, sex, father, mother, gen = None):
-        self.fam.append(["0", iid, father, mother, sex, "-9"])
+        self.fam.append([str(self.cur_fam), iid, father, mother, sex, "-9"])
 
         if gen:
             self.ages.append([iid, self._age(gen)])
@@ -107,6 +115,10 @@ class GeneratePairs:
     def add_segments(self, rel_type, id1, id2):
         segment_arr = generate_simple_segments_for(rel_type, id1, id2)
         self.segments.append(segment_arr)
+        for iid in [id1, id2]:
+            segment_arr = generate_simple_segments_for("self", iid, iid)
+            self.segments.append(segment_arr)
+        self.cur_fam += 1
 
     def po(self):
         for _ in range(self.n_pairs):
@@ -259,7 +271,18 @@ class GeneratePairs:
 
         # Save segments
         segment_df = pd.DataFrame(segments, columns=cols)
-        segment_df.to_csv(f"{path_and_prefix}_segments.txt", sep=delim, index=False)
+
+        # As phasedibd
+        segment_df.to_csv(f"{path_and_prefix}_phasedibd.txt", sep=delim, index=False)
+
+        # As hapibd
+        segment_df["id1_haplotype"] += 1
+        segment_df["id2_haplotype"] += 1
+        segment_df["start_mb"] = segment_df["start_cm"].apply(int) * 1_000_000
+        segment_df["end_mb"] = segment_df["end_cm"].apply(int) * 1_000_000
+        segment_df["l"] = segment_df.end_cm - segment_df.start_cm
+
+        segment_df[["id1", "id1_haplotype", "id2", "id2_haplotype", "chromosome", "start_mb", "end_mb", "l"]].to_csv(f"{path_and_prefix}_hapibd.txt", sep=delim, index=False, header=False)
 
         # Save age file
         if len(self.ages) > 0:
