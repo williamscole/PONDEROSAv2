@@ -351,6 +351,9 @@ class Pairs:
     def n_pairs(self):
         return self.max_index
 
+    def get_pair_dict(self, index_to_pair: bool = False):
+        return self.index_to_pair if index_to_pair else self.pair_to_index
+        
     def _pair_order(self, id1: str, id2: str) -> bool:
         return id1 < id2
 

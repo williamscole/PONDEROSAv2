@@ -133,6 +133,16 @@ class PedigreeRegistry:
 
         return self._format_return(it.chain(*pairs), it.chain(*rel_list), output_style=output_style)
 
+    def get_relationships(self, pair_list: list):
+
+        out_pairs = {}
+        for nodes, pairs in self.nodes.items():
+            for id1, id2 in pairs:
+                out_pairs[(id1, id2)] = nodes
+                out_pairs[(id2, id1)] = nodes
+
+        return [out_pairs.get(tuple(pair), "unknown") for pair in pair_list]
+
 
 
 

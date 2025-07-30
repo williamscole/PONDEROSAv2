@@ -276,7 +276,7 @@ CLASSIF_DICT = {
         "hap_score": HaplotypeScoreClassifier
     }
 
-def train_classifiers(registry: PedigreeRegistry, pairs: Pairs, output_prefix: str = None) -> Dict[str, RelationshipClassifier]:
+def train_classifiers(registry: PedigreeRegistry, pairs: Pairs) -> Dict[str, RelationshipClassifier]:
 
     trained_classifiers = {}
 
@@ -289,10 +289,6 @@ def train_classifiers(registry: PedigreeRegistry, pairs: Pairs, output_prefix: s
         classif.fit(X, y)
 
         trained_classifiers[classif_name] = classif
-
-    if output_prefix:
-        with open(f"{output_prefix}.classif.pkl", "wb") as pklf:
-            pkl.dump(trained_classifiers, pklf)
 
     return trained_classifiers
 
@@ -312,7 +308,7 @@ def train_load_classifiers(registry: PedigreeRegistry, pairs: Pairs, training_fi
 
 def run_inference(pairs: Pairs, trained_classifiers: Dict[str, RelationshipClassifier], hierarchy: PedigreeHierarchy) -> MatrixHierarchy:
 
-    matrix_hier = MatrixHierarchy.from_hierarchy(hierarchy, pairs.n_pairs(), list(trained_classifiers.keys()))
+    matrix_hier = MatrixHierarchy.from_hierarchy(hierarchy, pairs.get_pair_dict(index_to_pair=True), list(trained_classifiers.keys()))
 
     for classif_name, classif in trained_classifiers.items():
 
