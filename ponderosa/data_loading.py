@@ -131,7 +131,7 @@ class HapIBDLoader(IBDLoader):
         pass
 
         
-def load_ibd_from_file(file_path: str, ibd_caller: str, min_segment_length: float, min_total_ibd: float) -> IBD:
+def load_ibd_from_file(file_path: str, ibd_caller: str, min_segment_length: float, min_total_ibd: float, to_pandas: bool = False) -> IBD:
 
     ibd_caller_dict = {
         "phasedibd": PhasedIBDLoader,
@@ -142,7 +142,9 @@ def load_ibd_from_file(file_path: str, ibd_caller: str, min_segment_length: floa
 
     loader = loader_class(min_segment_length, min_total_ibd)
 
-    return loader.load_filtered_segments(file_path)
+    ibd_segments = loader.load_filtered_segments(file_path)
+    
+    return ibd_segments.to_pandas() if to_pandas else ibd_segments
 
 
 ####### Individual level methods #######
