@@ -1,33 +1,113 @@
 from abc import ABC, abstractmethod
 import polars as pl
 import pandas as pd
+from pathlib import Path
 from datetime import datetime
-from typing import List, Tuple, Any, Optional
+from typing import List, Tuple, Any, Optional, Union, Dict
 import numpy as np
 
 from .config import FilesConfig, AlgorithmConfig
 from .ibd_tools import IBD, ProcessSegments, Features
 
 ####### Load map file #######
+class PlinkMap(pl.DataFrame):
+    
+    def __init__(self, plink_file: Union[str, Path]):
+        
+        data = pl.read_csv(
+                        plink_file,
+                        separator=" ",
+                        has_header=False,
+                        new_columns=["chromosome", "rsid", "cm", "bp"],
+                        dtypes={
+                            "chromosome": pl.Int8,
+                            "rsid": pl.Utf8,
+                            "cm": pl.Float64,
+                            "bp": pl.Int64         
+                        }
+                    )
+        
+        # Call parent DataFrame constructor
+        super().__init__(data)
+
+        self.map_len = self._calculate_genome_length()
+
+    def _calculate_genome_length(self) -> float:
+        """Calculate total genome length from the map data."""
+        if len(self) == 0:
+            return 0.0
+        
+        # Get the range for each chromosome using Polars syntax
+        chrom_lengths = (
+            self.group_by('chromosome')
+            .agg([
+                pl.col('cm').min().alias('min_cm'),
+                pl.col('cm').max().alias('max_cm')
+            ])
+            .with_columns(
+                (pl.col('max_cm') - pl.col('min_cm')).alias('length')
+            )
+            .select('length')
+            .sum()
+        )
+        
+        return chrom_lengths.item() 
+    
+    def get_col(self, col: str) -> np.ndarray:
+        return self.select(col).to_numpy()
+    
+    @property
+    def _constructor(self):
+        """Ensures that operations return PlinkMap objects instead of DataFrames."""
+        return PlinkMap
+    
+    def __finalize__(self, other, method=None, **kwargs):
+        """Propagate metadata during operations."""
+        return self
+    
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame, genome_length: float = None):
+        """Create PlinkMap from existing DataFrame."""
+        instance = cls.__new__(cls)
+        super(PlinkMap, instance).__init__(df)
+        
+        # Set custom attributes
+        if genome_length is not None:
+            instance.map_len = genome_length
+        else:
+            instance.map_len = instance._calculate_genome_length()
+        
+        return instance
+
 class GeneticMap:
 
-    def __init__(self, map_df: pd.DataFrame, genome_len: float):
+    def __init__(self, map_df: PlinkMap, genome_len: float):
 
-        self.map_dfs = {chrom: chrom_df in map_df.groupby("chromosome")}
+        self.map_df = map_df
 
         self.genome_len = genome_len
 
     @classmethod
-    def add_plink(cls, plink_file: str):
+    def add_plink(cls, map_file: Union[str, Path]):
 
-        map_df = pd.read_csv(map_file, sep="\\s+",
-                                  names=["chromosome", "rsid", "cm", "bp"],
-                                  dtype={"chromosome": int, "rsid": str, "cm": float, "bp": int})
+        map_df = PlinkMap(map_file)
 
         # Get genome length
-        genome_len = sum([chrom_df.iloc[-1]["cm"] - chrom_df.iloc[0]["cm"] for chrom_df in self.map_dfs.values()])
+        genome_len = map_df.map_len
 
         return cls(map_df, genome_len)
+    
+    @classmethod
+    def add_plink_list(cls, map_file_list: List[Union[str, Path]]):
+
+        map_df_list = []
+        genome_len = 0
+        for map_file in map_file_list:
+            map_df = PlinkMap(map_file)
+            genome_len += map_df.map_len
+            map_df_list.append(map_df)
+
+        return cls(pl.concat(map_df_list), genome_len)
 
     @classmethod
     def add_hapmap(cls, hapmap_file: str):
@@ -39,11 +119,24 @@ class GeneticMap:
 
     @classmethod
     def no_map(cls, map_build: int = 37):
-        map_df, genome_len = self._wget_hapmap(map_build)
+        map_df, genome_len = cls._wget_hapmap(map_build)
         return cls(map_df, genome_len)
 
-    def interp(self, segment_df: IBD) -> IBD:
-        pass
+    def interp(self, arr: np.ndarray, chrom_arr: np.ndarray) -> np.ndarray:
+
+        interp_arr = np.zeros(arr.shape[0])
+
+        for chrom in np.unique(chrom_arr):
+            chrom_idx = np.where(chrom_arr == chrom)[0]
+
+            chrom_map = self.map_df.filter(pl.col("chromosome") == chrom)
+        
+            cm_val = chrom_map.get_column("cm").to_numpy()
+            bp_val = chrom_map.get_column("bp").to_numpy()
+
+            interp_arr[chrom_idx] = np.interp(arr[chrom_idx], bp_val, cm_val)
+
+        return interp_arr
 
     def get_genome_length(self):
         return self.genome_len
@@ -65,40 +158,55 @@ class IBDLoader(ABC):
         Return a Polars LazyFrame with standardized columns.
         """
         pass
-        
 
-    def load_filtered_segments(self, file_path: str) -> pl.DataFrame:
-        """Loads IBD data from a source and returns a polars DataFrame."""
+    @abstractmethod
+    def custom_process(self, df: pl.DataFrame, **kwargs) -> pl.DataFrame:
+        pass
 
-        segments = (
-        self.scan_file(file_path)
-        .with_columns([(pl.col('end_cm') - pl.col('start_cm')).alias('length_cm')])
-        .filter(pl.col('length_cm') >= self.min_segment_length)
-        .collect()
-        )
-    
-        # Create pair summaries from the segments we already loaded
+    def filter_pairs(self, df: Union[pl.DataFrame, pl.LazyFrame], min_total_ibd):
+
+        if isinstance(df, pl.DataFrame):
+            lazy_df = df.lazy()
+        else:
+            lazy_df = df
+
         pairs = (
-            segments
-            .lazy()
+            lazy_df
             .group_by(['id1', 'id2'])
             .agg([
                 pl.col('length_cm').sum().alias('total_ibd'),
                 pl.count().alias('n_segments')
             ])
-            .filter(pl.col('total_ibd') >= self.min_total_ibd)
-            .collect()
+            .filter(pl.col('total_ibd') >= min_total_ibd)
+            .collect()  # Only collect the small pairs summary
         )
-        
-        # Filter segments to only good pairs
-        good_pairs = set(zip(pairs['id1'], pairs['id2']))
-        filtered_segments = segments.filter(
-            pl.struct(['id1', 'id2'])
-            .map_elements(lambda x: (x['id1'], x['id2']) in good_pairs, return_dtype=pl.Boolean)
-        )
-        
-        return filtered_segments
 
+        good_pairs = set(zip(pairs['id1'], pairs['id2']))
+
+        filtered_segments = (
+            lazy_df
+            .filter(
+                pl.struct(['id1', 'id2'])
+                .map_elements(lambda x: (x['id1'], x['id2']) in good_pairs, return_dtype=pl.Boolean)
+            )
+            .collect()  # Collect only the filtered segments
+        )
+
+        return filtered_segments
+ 
+    def load_filtered_segments(self, file_path: str, **process_kwargs) -> pl.DataFrame:
+        """Loads IBD data from a source and returns a polars DataFrame."""
+
+        # Keep lazy as long as possible
+        segments_lazy = (
+            self.scan_file(file_path)
+            .filter(pl.col('length_cm') >= self.min_segment_length)
+        )
+
+        filtered_segments = self.filter_pairs(segments_lazy, self.min_segment_length)
+
+        return self.custom_process(filtered_segments, **process_kwargs)
+        
 
 class PhasedIBDLoader(IBDLoader):
     """Loader for phasedibd output format."""
@@ -110,7 +218,7 @@ class PhasedIBDLoader(IBDLoader):
         phasedibd format has columns:
         id1, id2, chromosome, start_cm, end_cm, id1_haplotype, id2_haplotype
         """
-        return pl.scan_csv(
+        df = pl.scan_csv(
             file_path,
             separator='\t',
             dtypes={
@@ -124,14 +232,75 @@ class PhasedIBDLoader(IBDLoader):
             }
         )
 
+        df = df.with_columns(
+        (pl.col('end_cm') - pl.col('start_cm')).alias('length_cm')
+        )
+        
+        return df.select([
+                'id1', 'id2', 'chromosome', 'start_cm', 'end_cm', 
+                'id1_haplotype', 'id2_haplotype', 'length_cm'
+            ])
+    
+    def custom_process(self, df: pl.DataFrame, **kwargs) -> pl.DataFrame:
+        return df
 
 class HapIBDLoader(IBDLoader):
 
     def scan_file(self, file_path: str) -> pl.LazyFrame:
-        pass
+        
+        # Read the 8-column HapIBD file (no header)
+        df = pl.scan_csv(
+            file_path,
+            separator='\t',
+            has_header=False,
+            new_columns=[
+                'id1', 'id1_haplotype', 'id2', 'id2_haplotype', 
+                'chromosome', 'start_bp', 'end_bp', 'length_cm'
+            ],
+            dtypes={
+                'id1': pl.Utf8,
+                'id1_haplotype': pl.Int8,
+                'id2': pl.Utf8, 
+                'id2_haplotype': pl.Int8,
+                'chromosome': pl.Int8,
+                'start_bp': pl.Int64,
+                'end_bp': pl.Int64,
+                'length_cm': pl.Float64
+            }
+        )
+
+        return df.with_columns([
+                (pl.col('id1_haplotype') - 1).alias('id1_haplotype'),
+                (pl.col('id2_haplotype') - 1).alias('id2_haplotype')
+            ]).select([
+                'id1', 'id2', 'chromosome', 'start_bp', 'end_bp',
+                'id1_haplotype', 'id2_haplotype', 'length_cm'
+            ])
+    
+    def custom_process(self, df: pl.DataFrame, **kwargs) -> pl.DataFrame:
+        """Convert bp coordinates to cm using genetic map interpolation."""
+        genetic_map = kwargs["genetic_map"]
+        
+        # Convert start_bp to start_cm
+        start_bp_array = df.get_column("start_bp").to_numpy()
+        chrom_array = df.get_column("chromosome").to_numpy()
+        start_cm_array = genetic_map.interp(start_bp_array, chrom_array)
+        
+        # Convert end_bp to end_cm  
+        end_bp_array = df.get_column("end_bp").to_numpy()
+        end_cm_array = genetic_map.interp(end_bp_array, chrom_array)
+        
+        # Add the new cm columns and drop bp columns
+        result = df.with_columns([
+            pl.Series("start_cm", start_cm_array),
+            pl.Series("end_cm", end_cm_array)
+        ]).drop(["start_bp", "end_bp"])
+        
+        return result
+            
 
         
-def load_ibd_from_file(file_path: str, ibd_caller: str, min_segment_length: float, min_total_ibd: float, to_pandas: bool = False) -> IBD:
+def load_ibd_from_file(file_paths: List[Path], ibd_caller: str, min_segment_length: float, min_total_ibd: float, to_pandas: bool = False) -> IBD:
 
     ibd_caller_dict = {
         "phasedibd": PhasedIBDLoader,
@@ -140,9 +309,23 @@ def load_ibd_from_file(file_path: str, ibd_caller: str, min_segment_length: floa
 
     loader_class = ibd_caller_dict[ibd_caller]
 
-    loader = loader_class(min_segment_length, min_total_ibd)
+    single_file = len(file_paths) == 1
 
-    ibd_segments = loader.load_filtered_segments(file_path)
+    # If multiple files, cannot filter based on min_total_ibd (since loading only for each chromosome)
+    loader = loader_class(min_segment_length, min_total_ibd if single_file else min_segment_length)
+
+    ibd_segments_list = []
+
+    for file_path in file_paths:
+        ibd_segments_list.append(loader.load_filtered_segments(file_path))
+
+    if single_file:
+        ibd_segments = ibd_segments_list[0]
+    # Multiple files added; must concagt and then filter on total ibd
+    else:
+        ibd_segments = pl.concat(ibd_segments_list)
+
+        ibd_segments = loader.filter_pairs(ibd_segments, min_total_ibd)
     
     return ibd_segments.to_pandas() if to_pandas else ibd_segments
 
