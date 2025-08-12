@@ -1,0 +1,29 @@
+---
+# PONDEROSA configuration for test data with multiple map files
+files:
+  ibd: "tests/data/test1/test_phasedibd.txt"
+  fam: "tests/data/test1/test.fam"
+  ibd_caller: "phasedibd"
+  ages: "tests/data/test1/test_ages.txt"
+  
+  # Multiple map files (one per chromosome)
+  map_files:
+    - "tests/data/test1/test_chr1.map"
+    - "tests/data/test1/test_chr2.map"
+
+# Algorithm parameters
+algorithm:
+  min_segment_length: 3.0
+  min_total_ibd: 50.0
+  max_gap: 1.0
+  use_phase_correction: true
+  population: "test_pop"
+
+# Output configuration
+output:
+  output: "test_results"
+  min_probability: 0.5
+  write_readable: true
+  write_pickle: true
+  log_level: "INFO"
+  verbose: false
