@@ -61,7 +61,11 @@ class FilesConfig:
         if single_file:
             if not single_file.exists():
                 raise FileNotFoundError(f"{single_file_arg(file_type)} file not found: {single_file}")
-            out_list = [single_file]
+            
+            if "chr1" in single_file.name: # Populate with all other chromosomes
+                out_list = [single_file.with_name(single_file.name.replace("chr1", f"chr{i}")) for i in range(1, 23)]
+            else:
+                out_list = [single_file]
 
         elif file_list:
             if not file_list:
