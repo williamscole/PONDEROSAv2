@@ -11,8 +11,8 @@ from .ibd_tools import IBD, ProcessSegments, Features
 from .map_tools import GeneticMap
 
 
+
 ##### IBD loading methods #####
-# TODO: implement interpolation of genetic map (it can currently be added to the class when init, but need to update scan_file or add another function to do the interp)
 class IBDLoader(ABC):
     """Abstract contract for all IBD loading classes."""
     def __init__(self, min_segment_length: float = 5.0, min_total_ibd: float = 100.0, genetic_map: Optional['GeneticMap'] = None):
