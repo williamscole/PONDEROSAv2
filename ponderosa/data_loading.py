@@ -8,138 +8,7 @@ import numpy as np
 
 from .config import FilesConfig, AlgorithmConfig
 from .ibd_tools import IBD, ProcessSegments, Features
-
-####### Load map file #######
-class PlinkMap(pl.DataFrame):
-    
-    def __init__(self, plink_file: Union[str, Path]):
-        
-        data = pl.read_csv(
-                        plink_file,
-                        separator=" ",
-                        has_header=False,
-                        new_columns=["chromosome", "rsid", "cm", "bp"],
-                        dtypes={
-                            "chromosome": pl.Int8,
-                            "rsid": pl.Utf8,
-                            "cm": pl.Float64,
-                            "bp": pl.Int64         
-                        }
-                    )
-        
-        # Call parent DataFrame constructor
-        super().__init__(data)
-
-        self.map_len = self._calculate_genome_length()
-
-    def _calculate_genome_length(self) -> float:
-        """Calculate total genome length from the map data."""
-        if len(self) == 0:
-            return 0.0
-        
-        # Get the range for each chromosome using Polars syntax
-        chrom_lengths = (
-            self.group_by('chromosome')
-            .agg([
-                pl.col('cm').min().alias('min_cm'),
-                pl.col('cm').max().alias('max_cm')
-            ])
-            .with_columns(
-                (pl.col('max_cm') - pl.col('min_cm')).alias('length')
-            )
-            .select('length')
-            .sum()
-        )
-        
-        return chrom_lengths.item() 
-    
-    def get_col(self, col: str) -> np.ndarray:
-        return self.select(col).to_numpy()
-    
-    @property
-    def _constructor(self):
-        """Ensures that operations return PlinkMap objects instead of DataFrames."""
-        return PlinkMap
-    
-    def __finalize__(self, other, method=None, **kwargs):
-        """Propagate metadata during operations."""
-        return self
-    
-    @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, genome_length: float = None):
-        """Create PlinkMap from existing DataFrame."""
-        instance = cls.__new__(cls)
-        super(PlinkMap, instance).__init__(df)
-        
-        # Set custom attributes
-        if genome_length is not None:
-            instance.map_len = genome_length
-        else:
-            instance.map_len = instance._calculate_genome_length()
-        
-        return instance
-
-class GeneticMap:
-
-    def __init__(self, map_df: PlinkMap, genome_len: float):
-
-        self.map_df = map_df
-
-        self.genome_len = genome_len
-
-    @classmethod
-    def add_plink(cls, map_file: Union[str, Path]):
-
-        map_df = PlinkMap(map_file)
-
-        # Get genome length
-        genome_len = map_df.map_len
-
-        return cls(map_df, genome_len)
-    
-    @classmethod
-    def add_plink_list(cls, map_file_list: List[Union[str, Path]]):
-
-        map_df_list = []
-        genome_len = 0
-        for map_file in map_file_list:
-            map_df = PlinkMap(map_file)
-            genome_len += map_df.map_len
-            map_df_list.append(map_df)
-
-        return cls(pl.concat(map_df_list), genome_len)
-
-    @classmethod
-    def add_hapmap(cls, hapmap_file: str):
-        pass
-
-    def _wget_hapmap(self, map_build: int) -> Tuple[pd.DataFrame, float]:
-        map_url = f"https://bochet.gcc.biostat.washington.edu/beagle/genetic_maps/plink.GRCh{map_build}.map.zip"
-        pass
-
-    @classmethod
-    def no_map(cls, map_build: int = 37):
-        map_df, genome_len = cls._wget_hapmap(map_build)
-        return cls(map_df, genome_len)
-
-    def interp(self, arr: np.ndarray, chrom_arr: np.ndarray) -> np.ndarray:
-
-        interp_arr = np.zeros(arr.shape[0])
-
-        for chrom in np.unique(chrom_arr):
-            chrom_idx = np.where(chrom_arr == chrom)[0]
-
-            chrom_map = self.map_df.filter(pl.col("chromosome") == chrom)
-        
-            cm_val = chrom_map.get_column("cm").to_numpy()
-            bp_val = chrom_map.get_column("bp").to_numpy()
-
-            interp_arr[chrom_idx] = np.interp(arr[chrom_idx], bp_val, cm_val)
-
-        return interp_arr
-
-    def get_genome_length(self):
-        return self.genome_len
+from .map_tools import GeneticMap
 
 
 ##### IBD loading methods #####
@@ -203,7 +72,8 @@ class IBDLoader(ABC):
             .filter(pl.col('length_cm') >= self.min_segment_length)
         )
 
-        filtered_segments = self.filter_pairs(segments_lazy, self.min_segment_length)
+        # Filters based on pair-wise total IBD
+        filtered_segments = self.filter_pairs(segments_lazy, self.min_total_ibd)
 
         return self.custom_process(filtered_segments, **process_kwargs)
         
@@ -330,6 +200,28 @@ def load_ibd_from_file(file_paths: List[Path], ibd_caller: str, min_segment_leng
     return ibd_segments.to_pandas() if to_pandas else ibd_segments
 
 
+class FamFile:
+
+    def __init__(self, fam_file: Path):
+
+        self.fam_df = FamFile.load_fam(fam_file)
+
+    @staticmethod
+    def load_fam(fam_file: Path) -> pd.DataFrame:
+
+        return pd.read_csv(fam_file, sep="\\s+",
+                             names=["fid", "iid", "father", "mother", "sex", "pheno"],
+                             dtype={"iid": str, "father": str, "mother": str, "sex": int})
+
+    
+    # Returns a nested list of the founders in each family
+    def get_founders(self) -> List[List[str]]:
+
+        founder_df = self.fam_df[self.fam_df.apply(lambda x: x.father=="0" and x.mother=="0", axis=1)]
+
+        return [fam_df["iid"].values.tolist() for _, fam_df in founder_df.groupby("fid")]
+
+
 ####### Individual level methods #######
 class Individuals:
     """
@@ -388,9 +280,7 @@ class Individuals:
 
     def add_fam_file(self, fam_file: str):
 
-        fam_df = pd.read_csv(fam_file, sep="\\s+",
-                             names=["fid", "iid", "father", "mother", "sex", "pheno"],
-                             dtype={"iid": str, "father": str, "mother": str, "sex": int})
+        fam_df = FamFile.load_fam(fam_file)
 
         for row in fam_df.itertuples():
             self._add_iid(row.iid, row.father, self.FATHER)
