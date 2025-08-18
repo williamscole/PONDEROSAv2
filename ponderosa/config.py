@@ -33,29 +33,84 @@ class FilesConfig:
     """File input configuration for PONDEROSA."""
     
     # Required files
-    ibd: Path
     fam: Path
     ibd_caller: str
     
     # Optional files
     ages: Optional[Path] = None
-    mapf: Optional[Path] = None
     populations: Optional[Path] = None
     training: Optional[Path] = None
     rel_tree: Optional[Path] = None
+
+    mapf: Optional[Path] = None
+    map_files: Optional[List[Path]] = None
+    _map_file_list: Optional[List[Path]] = field(default=None, init=False)
+
+    ibd: Optional[Path] = None
+    ibd_files: Optional[List[Path]] = None
+    _ibd_file_list: Optional[List[Path]] = field(default=None, init=False)
+
+    def _validate_file_lists(self, single_file: Path, file_list: List[Path], file_type: str) -> List[Path]:
+
+        single_file_arg = lambda x: {"map": "mapf", "ibd": "ibd"}[x]
+        multiple_file_arg = lambda x: f"{x}_files"
+
+        if single_file and file_list:
+            raise ValueError(f"Cannot specify both '{single_file_arg(file_type)}' and '{multiple_file_arg(file_type)}'. Choose one.")
+
+        if single_file:
+            if not single_file.exists():
+                raise FileNotFoundError(f"{single_file_arg(file_type)} file not found: {single_file}")
+            
+            if "chr1" in single_file.name: # Populate with all other chromosomes
+                out_list = [single_file.with_name(single_file.name.replace("chr1", f"chr{i}")) for i in range(1, 23)]
+            else:
+                out_list = [single_file]
+
+        elif file_list:
+            if not file_list:
+                raise ValueError(f"{multiple_file_arg(file_type)} list cannot be empty")
+            out_list = []
+            for i, file_n in enumerate(file_list):
+                if not file_n.exists():
+                    raise FileNotFoundError(f"{multiple_file_arg(file_type)} file not found: {file_n} (index {i})")
+                out_list.append(file_n)
+
+        else:
+            ValueError(f"{file_type} file(s) have not been provided. Specify either '{single_file_arg(file_type)}' or '{multiple_file_arg(file_type)}'.")
+
+        return out_list
     
     def validate(self) -> None:
         """Validate that required files exist."""
-        required_files = [self.ibd, self.fam]
+        # Check required files
+        required_files = [self.fam]
         for file_path in required_files:
             if not file_path.exists():
                 raise FileNotFoundError(f"Required file not found: {file_path}")
+            
+        self._ibd_file_list = self._validate_file_lists(self.ibd, self.ibd_files, "ibd")
+        self._map_file_list = self._validate_file_lists(self.mapf, self.map_files, "map")
         
         # Check optional files if provided
         optional_files = [self.ages, self.mapf, self.populations, self.training]
         for file_path in optional_files:
             if file_path and not file_path.exists():
                 logger.warning(f"Optional file not found: {file_path}")
+
+    @property
+    def map_file_list(self) -> List[Path]:
+        """Return unified list of map files. Must call validate() first."""
+        if self._map_file_list is None:
+            raise RuntimeError("Must call validate() before accessing map_file_list")
+        return self._map_file_list
+    
+    @property
+    def ibd_file_list(self) -> List[Path]:
+        """Return unified list of map files. Must call validate() first."""
+        if self._ibd_file_list is None:
+            raise RuntimeError("Must call validate() before accessing map_file_list")
+        return self._ibd_file_list
 
 @dataclass 
 class AlgorithmConfig:
@@ -131,12 +186,16 @@ class PonderosaConfig:
         """Create configuration from dictionary (CLI args or YAML)."""
         
         files_dict = config_dict.get("files", {})
-        path_fields = {'ibd', 'fam', 'ages', 'mapf', 'populations', 'training', 'rel_tree'}
-            
+        
+        # Single path fields (convert to Path objects)
+        single_path_fields = {'ibd', 'fam', 'ages', 'mapf', 'populations', 'training', 'rel_tree'}
         for key, value in files_dict.items():
-            if value is not None:
-                if key in path_fields:
-                    files_dict[key] = Path(value)
+            if value is not None and key in single_path_fields:
+                files_dict[key] = Path(value)
+        
+        # Handle map_files list (convert each string to Path)
+        if 'map_files' in files_dict and files_dict['map_files'] is not None:
+            files_dict['map_files'] = [Path(f) for f in files_dict['map_files']]
         
         # Create nested config objects
         files_config = FilesConfig(**files_dict)
@@ -148,7 +207,7 @@ class PonderosaConfig:
             algorithm=algorithm_config, 
             output=output_config
         )
-    
+
     @classmethod
     def from_cli_and_yaml(cls, cli_args: Dict[str, Any]) -> "PonderosaConfig":
         """Load from YAML file if provided, then override with CLI args."""

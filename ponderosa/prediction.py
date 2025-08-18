@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+import pandas as pd
 
 from .pedigree import PedigreeHierarchy
 
@@ -16,7 +17,10 @@ def process_phase_error(X: np.ndarray, prob_threshold: float = 0.5) -> np.ndarra
 
 class MatrixHierarchy:
     # def __init__(self, diG: nx.DiGraph, n_pairs: int, methods: list):
-    def __init__(self, directed_edge_list: list, n_pairs: int, methods: list):
+    def __init__(self, directed_edge_list: list, index_to_pair: dict, methods: list):
+
+        self.index_to_pair = index_to_pair
+        self.n_pairs = len(index_to_pair)
 
         diG = nx.DiGraph()
         diG.add_edges_from(directed_edge_list)
@@ -28,14 +32,10 @@ class MatrixHierarchy:
         self.method_to_idx = {method: idx for idx, method in enumerate(list(methods) + ["aggregated"])}
 
         # Creates a matrix that is mxnx3, whre m=no. of pairs, n=no. of relationships, 3 corresponds to posterior, conditional, LDA method
-        self.matrix = np.full((n_pairs, len(self.nodes), 3), np.nan)
+        self.matrix = np.full((self.n_pairs, len(self.nodes), 3), np.nan)
         self.relatives_idx = self.node_to_idx["relatives"]
         self.matrix[:, self.relatives_idx, 0] = 1
         self.matrix[:, self.relatives_idx, 1] = 1
-
-        self.n_pairs = n_pairs
-
-        self.idx_to_len = {}
 
         D = dict()
         for child in nx.bfs_tree(diG, "relatives"):
@@ -252,6 +252,31 @@ class MatrixHierarchy:
             return most_likely_idx
 
         return [self.nodes[degree_idx[i]] for i in most_likely_idx]
+
+    def to_dataframe(self, min_p: float = 0.50) -> pd.DataFrame:
+
+        id_df = pd.DataFrame(index=range(self.n_pairs))
+
+        pairs = np.row_stack(id_df.index.map(self.index_to_pair))
+        id_df["id1"] = pairs[:,0]
+        id_df["id2"] = pairs[:,1]
+        id_df["degree"] = self.most_likely_degree()
+
+        most_probable, prob = self.most_probable(min_p)
+        id_df["pred_rel"] = most_probable
+        id_df["prob"] = prob
+
+        df = pd.DataFrame(self.matrix[:,:,0]).replace(np.nan, 0)
+
+        df.rename({j:i for i,j in self.node_to_idx.items()}, axis=1, inplace=True)
+        df = df.drop("relatives", axis=1)
+        probability_columns = list(df.columns)
+
+        df = id_df.merge(df, right_index=True, left_index=True)
+
+        df.attrs["prob_columns"] = probability_columns
+
+        return df
 
     def visualize_hierarchy(self, sample_idx: int) -> str:
         """

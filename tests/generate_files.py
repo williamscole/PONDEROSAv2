@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
 
+CHROM_LEN = 160
+
 def simple_ibd_segments(kinship: float, id1: str, id2: str, id1_haplotype: list, id2_haplotype: list, n_chrom: int = 2):
 
     segments = []
 
-    chrom_len = 160
+    chrom_len = CHROM_LEN
 
     for c in range(1, n_chrom + 1):
 
@@ -298,15 +300,15 @@ class GeneratePairs:
         dfs = []
         for i in range(1, n_chrom + 1):
             map_df = pd.DataFrame(
-                {"chr": [i] * 100,
-                "cm": np.linspace(0, 100, 100),
-                "mb": np.linspace(0, 100_000_000, 100),
-                "rsid": [f"c{i}_rs{j}" for j in range(100)]
+                {"chr": [i] * CHROM_LEN,
+                "cm": np.linspace(0, CHROM_LEN, CHROM_LEN),
+                "bp": np.linspace(0, 1_000_000*CHROM_LEN, CHROM_LEN).astype(int),
+                "rsid": [f"c{i}_rs{j}" for j in range(CHROM_LEN)]
                 }
             )
             dfs.append(map_df)
 
-        pd.concat(dfs)[["chr", "rsid", "cm", "mb"]].to_csv(f"{path_and_prefix}.map", header=False, index=False, sep=" ")
+        pd.concat(dfs)[["chr", "rsid", "cm", "bp"]].to_csv(f"{path_and_prefix}.map", header=False, index=False, sep=" ")
 
 
 if __name__ == "__main__":

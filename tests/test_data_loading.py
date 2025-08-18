@@ -4,7 +4,7 @@ import polars as pl
 import numpy as np
 import pytest
 
-from ponderosa.data_loading import PhasedIBDLoader, Individuals, Pairs, load_individuals, load_pairs
+from ponderosa.data_loading import PhasedIBDLoader, HapIBDLoader, Individuals, Pairs, load_individuals, load_pairs, GeneticMap
 from ponderosa.ibd_tools import IBD, ProcessSegments, Features
 
 # from ponderosa.ibd_tools import Pairs, ProcessSegments
@@ -28,15 +28,42 @@ BASIC_SEGMENTS_TRUTH = {
 
 class TestLoading:
 
+    test_dir = Path(__file__).parent
+
     def test_phasedibd_1(self):
 
-        test_dir = Path(__file__).parent
-        ibd_file = test_dir / "data" / "test1" / "test_phasedibd.txt"
+        ibd_file = self.test_dir / "data" / "test1" / "test_phasedibd.txt"
 
         loader = PhasedIBDLoader(min_segment_length=5, min_total_ibd=100)
         segments = loader.load_filtered_segments(ibd_file)
 
         pytest.set_trace()
+
+    def test_hapibd_1(self):
+
+        ibd_file = self.test_dir / "data" / "test1" / "test_hapibd.txt"
+
+        map_file = self.test_dir / "data" / "test1" / "test.map"
+
+        genetic_map = GeneticMap.add_plink(map_file)
+
+        loader = HapIBDLoader(min_segment_length=5, min_total_ibd=100)
+        segments = loader.load_filtered_segments(ibd_file, genetic_map=genetic_map)
+
+        pytest.set_trace()
+
+    def test_map_1(self):
+
+        map_file = self.test_dir / "data" / "test1" / "test.map"
+
+        genetic_map = GeneticMap.add_plink(map_file)
+
+        # pytest.set_trace()
+
+
+
+
+
 
 
 

@@ -59,8 +59,14 @@ class TestMatrixHierarchy:
            np.array(["HS", "GPAV", "Phase error"]),
            "hap"]
 
+    INDEX_TO_PAIR = {0: ("0", "1"),
+                     1: ("2", "3"),
+                     2: ("4", "5"),
+                     3: ("6", "7"),
+                     4: ("8", "9")}
+
     def test_single_level(self):
-        mhier = MatrixHierarchy(NODE_LIST, 5, self.METHODS)
+        mhier = MatrixHierarchy(NODE_LIST, self.INDEX_TO_PAIR, self.METHODS)
 
         # level 1
         mhier.add_probs(*self.DEGREE)
@@ -77,7 +83,7 @@ class TestMatrixHierarchy:
 
     def test_two_level(self):
 
-        mhier = MatrixHierarchy(NODE_LIST, 5, self.METHODS)
+        mhier = MatrixHierarchy(NODE_LIST, self.INDEX_TO_PAIR, self.METHODS)
 
         # level 1
         mhier.add_probs(*self.DEGREE)
@@ -94,7 +100,7 @@ class TestMatrixHierarchy:
 
     def test_three_level(self):
 
-        mhier = MatrixHierarchy(NODE_LIST, 5, self.METHODS)
+        mhier = MatrixHierarchy(NODE_LIST, self.INDEX_TO_PAIR, self.METHODS)
 
         # level 1
         mhier.add_probs(*self.DEGREE)
@@ -133,7 +139,7 @@ class TestMatrixHierarchy:
         assert np.allclose(exp_prob, prob, atol=1e-4)
         assert np.array_equal(exp_pred, pred)
 
-        import pytest; pytest.set_trace()
+        mhier.to_dataframe()
 
 
 
