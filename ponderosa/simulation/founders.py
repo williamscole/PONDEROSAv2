@@ -5,12 +5,13 @@ Script for choosing the founders of the simulation
 import random
 import pandas as pd
 import polars as pl
-from ponderosa.data_loading import load_ibd_from_file
+from ponderosa.data_loading import load_ibd_from_file, GeneticMap
+from ponderosa.simulation.pedsim import PedSim
 
 def choose_founders(
     ibd_file: str,
     ibd_caller: str,
-    genetic_map_file: str,
+    genetic_map_file_list: str,
     n_pairs: int,
     kinship_threshold: float = None,
     total_cm_threshold: float = None
@@ -27,26 +28,32 @@ def choose_founders(
        (kinship_threshold is not None and total_cm_threshold is not None):
         raise ValueError("You must provide exactly one of: kinship_threshold OR total_cm_threshold.")
 
+    
     if kinship_threshold is not None:
-        # TODO: Implement proper conversion using genetic_map_file
-        total_cm_threshold = 1000  # <-- Replace this with actual conversion logic
-        print(f"Converted kinship {kinship_threshold} to total_cm_threshold: {total_cm_threshold}")
+        gm = GeneticMap.add_plink_list(genetic_map_file_list)
+        total_genome_cm = gm.get_genome_length()
 
-    ibd_df_all = load_ibd_from_file(
+        total_cm_threshold = kinship_threshold * total_genome_cm
+
+        print(f"Total genome length: {total_genome_cM:.2f} cM")
+        print(f"Converted kinship {kinship_threshold} → total_cm_threshold: {total_cm_threshold:.2f} cM")
+
+    ibd_df_all = load_ibd_from_file( #remove this
         file_path = ibd_file,
         ibd_caller = ibd_caller,
         min_segment_length=0,
         min_total_ibd=0,
-        #to_pandas=True
     )
 
     ibd_df_related = load_ibd_from_file(
         file_path = ibd_file,
         ibd_caller = ibd_caller,
-        min_segment_length=None,  # TODO: Revisit this
-        min_total_ibd=total_cm_threshold,
-        #to_pandas=True
+        min_segment_length = 5,
+        min_total_ibd = total_cm_threshold,
     )
+
+    print("length ibd_df_all:", len(ibd_df_all))
+    print("length ibd_df_related:", len(ibd_df_related))
 
     closely_related = set(
         tuple(sorted((row[0], row[1])))
@@ -55,17 +62,18 @@ def choose_founders(
 
     individuals = set(ibd_df_all["id1"].to_list()).union(set(ibd_df_all["id2"].to_list()))
 
-    print("Closely related pairs:", closely_related)
+    print("Closely related pairs, includes self-pairs:", len(closely_related))
     print("Number of individuals:", len(individuals))
-    print("Sample individuals:", list(individuals)[:5])
 
     candidate_pairs = []
     individuals = list(individuals)
     for i in range(len(individuals)):
         for j in range(i + 1, len(individuals)):
-            pair = tuple(sorted((individuals[i], individuals[j])))
-            if pair not in closely_related:
-                candidate_pairs.append(pair)
+            if individuals[i] != individuals[j]:
+                pair = (individuals[i], individuals[j])
+                if pair not in closely_related:
+                    candidate_pairs.append(pair)
+    print("Number of candidate pairs:", len(candidate_pairs))
 
     if not candidate_pairs:
         raise ValueError("No unrelated pairs available under given threshold.")
