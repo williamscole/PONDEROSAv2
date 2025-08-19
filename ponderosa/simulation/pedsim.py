@@ -1,5 +1,6 @@
 
 import subprocess
+from pathlib import Path
 # from config import SimulationConfig
 
 class PedSim:
@@ -9,10 +10,9 @@ class PedSim:
                  def_file: str,
                  intf_file: str,
                  map_file: str,
-                 founder_file: str,
                  output: str,
                  executable_path: str,
-                 *args):
+                 founder_file: str = None):
         
         self.flags = {
             "-i": vcf_file,
@@ -24,6 +24,29 @@ class PedSim:
         }
 
         self.executable = executable_path
+
+        output = Path(output).parent
+        self.path = output.parent
+        self.prefix = output.name
+
+
+    def update_flag(self, flag, arg):
+        assert flag in self.flags
+
+        self.flags[flag] = arg
+
+    def get_file(self, file_type):
+
+        file_types = ["fam"]
+
+        assert file_type in file_types
+
+        suffix = {
+            "fam": "-everyone.fam"
+        }
+
+        return self.path / f"{self.prefix}{suffix}"
+
 
     # @classmethod
     # def from_config(cls, config: SimulationConfig):
