@@ -170,7 +170,7 @@ class HapIBDLoader(IBDLoader):
             
 
         
-def load_ibd_from_file(file_paths: List[Path], ibd_caller: str, min_segment_length: float, min_total_ibd: float, to_pandas: bool = False) -> IBD:
+def load_ibd_from_file(file_paths: List[Path], ibd_caller: str, min_segment_length: float, min_total_ibd: float, to_pandas: bool = False, **kwargs) -> IBD:
 
     ibd_caller_dict = {
         "phasedibd": PhasedIBDLoader,
@@ -187,7 +187,7 @@ def load_ibd_from_file(file_paths: List[Path], ibd_caller: str, min_segment_leng
     ibd_segments_list = []
 
     for file_path in file_paths:
-        ibd_segments_list.append(loader.load_filtered_segments(file_path))
+        ibd_segments_list.append(loader.load_filtered_segments(file_path, **kwargs))
 
     if single_file:
         ibd_segments = ibd_segments_list[0]
