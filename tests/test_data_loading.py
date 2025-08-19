@@ -37,7 +37,7 @@ class TestLoading:
         loader = PhasedIBDLoader(min_segment_length=5, min_total_ibd=100)
         segments = loader.load_filtered_segments(ibd_file)
 
-        pytest.set_trace()
+        # pytest.set_trace()
 
     def test_hapibd_1(self):
 
@@ -49,14 +49,6 @@ class TestLoading:
 
         loader = HapIBDLoader(min_segment_length=5, min_total_ibd=100)
         segments = loader.load_filtered_segments(ibd_file, genetic_map=genetic_map)
-
-        pytest.set_trace()
-
-    def test_map_1(self):
-
-        map_file = self.test_dir / "data" / "test1" / "test.map"
-
-        genetic_map = GeneticMap.add_plink(map_file)
 
         # pytest.set_trace()
 
