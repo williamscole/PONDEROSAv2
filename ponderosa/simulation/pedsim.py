@@ -55,7 +55,7 @@ class PedSim:
 
     def _get_command(self, dry_run: bool = False):
 
-        cmd = " ".join([f"{flag} {arg}" for flag, arg in self.flags.items()])
+        cmd = " ".join([f"{flag} {arg}" for flag, arg in self.flags.items() if arg])
 
         if dry_run:
             cmd += " --dry_run"
