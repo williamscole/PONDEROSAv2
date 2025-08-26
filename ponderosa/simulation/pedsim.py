@@ -25,9 +25,10 @@ class PedSim:
 
         self.executable = executable_path
 
-        output = Path(output).parent
+        output = Path(output)
         self.path = output.parent
         self.prefix = output.name
+
 
 
     def update_flag(self, flag, arg):
@@ -45,7 +46,7 @@ class PedSim:
             "fam": "-everyone.fam"
         }
 
-        return self.path / f"{self.prefix}{suffix}"
+        return self.path / f"{self.prefix}{suffix[file_type]}"
 
 
     # @classmethod
