@@ -5,7 +5,7 @@ Script for choosing the founders of the simulation
 import random
 import pandas as pd
 import polars as pl
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Dict
 from ponderosa.data_loading import load_ibd_from_file, GeneticMap, FamFile
 from ponderosa.simulation.pedsim import PedSim
 
@@ -52,12 +52,14 @@ def calculate_relatedness(
 def pedsim_dryrun(
     pedsim: PedSim
 ) -> List[List[str]]:
-"""   
+    """   
     Ped-sim dry run to obtain fam file needed for simulations
-"""
+    """
 
     pedsim.dry_run()
     fam_file = pedsim.get_file("fam")
+    fam = FamFile(fam_file)
+    return fam.get_founders()
 
 
 def create_founders_file(
