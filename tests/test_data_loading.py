@@ -4,7 +4,7 @@ import polars as pl
 import numpy as np
 import pytest
 
-from ponderosa.data_loading import PhasedIBDLoader, HapIBDLoader, Individuals, Pairs, load_individuals, load_pairs, GeneticMap
+from ponderosa.data_loading import PhasedIBDLoader, HapIBDLoader, load_ibd_from_file, Individuals, Pairs, load_individuals, load_pairs, GeneticMap
 from ponderosa.ibd_tools import IBD, ProcessSegments, Features
 
 # from ponderosa.ibd_tools import Pairs, ProcessSegments
@@ -37,8 +37,6 @@ class TestLoading:
         loader = PhasedIBDLoader(min_segment_length=5, min_total_ibd=100)
         segments = loader.load_filtered_segments(ibd_file)
 
-        pytest.set_trace()
-
     def test_hapibd_1(self):
 
         ibd_file = self.test_dir / "data" / "test1" / "test_hapibd.txt"
@@ -50,15 +48,29 @@ class TestLoading:
         loader = HapIBDLoader(min_segment_length=5, min_total_ibd=100)
         segments = loader.load_filtered_segments(ibd_file, genetic_map=genetic_map)
 
-        pytest.set_trace()
+    def test_load_ibd_from_file(self):
 
-    def test_map_1(self):
+        hapibd_file = self.test_dir / "data" / "test1" / "test_hapibd.txt"
+        phasedibd_file = self.test_dir / "data" / "test1" / "test_phasedibd.txt"
 
         map_file = self.test_dir / "data" / "test1" / "test.map"
 
         genetic_map = GeneticMap.add_plink(map_file)
 
-        # pytest.set_trace()
+        min_len = 5
+        min_kinship = 50
+
+        for ibd_caller, file_n in zip(["hap-ibd", "phasedibd"], [hapibd_file, phasedibd_file]):
+
+            if ibd_caller == "hap-ibd":
+                segments = load_ibd_from_file([file_n], ibd_caller, min_len, min_kinship, to_pandas=True, genetic_map=genetic_map)
+            elif ibd_caller == "phasedibd":
+                segments = load_ibd_from_file([file_n], ibd_caller, min_len, min_kinship, to_pandas=True)
+
+            assert segments["length_cm"].min() >= min_len
+
+            for _, pair_df in segments.groupby(["id1", "id2"]):
+                assert pair_df["length_cm"].sum() >= min_kinship
 
 
 
