@@ -170,7 +170,7 @@ The priors file allows you to specify age-based relationship constraints. The fo
 ```
 rel    operator    age_gap
 MHS    >           25
-GP     <=       30
+GP     <=          30
 ```
 
 **Column Descriptions:**
