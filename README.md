@@ -61,7 +61,7 @@ These arguments specify input and output files:
 | `--populations` | Path | No | Population assignment file |
 | `--training` | Path | No | Directory containing pre-trained models |
 
-* Unless your IBD caller outputs the segment length in cM
+*Unless your IBD caller outputs the segment length in cM
 
 
 ### Algorithm Arguments
