@@ -55,11 +55,13 @@ These arguments specify input and output files:
 | `--ibd` | Path | Yes | IBD segments file |
 | `--fam` | Path | Yes | PLINK FAM file with individual information |
 | `--ibd-caller` | Choice | Yes | IBD calling software: `phasedibd`, `hapibd` |
-| `--map` | Path | Yes | Genetic map file for coordinate conversion |
+| `--map` | Path | Yes* | Genetic map file for coordinate conversion |
 | `--ages` | Path | No | File containing age information for individuals |
 | `--priors` | Path | No | File specifying relationship priors (e.g., age-based priors) |
 | `--populations` | Path | No | Population assignment file |
 | `--training` | Path | No | Directory containing pre-trained models |
+
+* Unless your IBD caller outputs the segment length in cM
 
 
 ### Algorithm Arguments
@@ -190,6 +192,7 @@ Analyze relationships using PhaseIBD output with default parameters:
 ```bash
 python -m ponderosa.cli \
   --ibd segments.txt \
+  --map input.map \
   --fam individuals.fam \
   --output my_results
 ```
@@ -199,6 +202,7 @@ python -m ponderosa.cli \
 ```bash
 python -m ponderosa.cli \
   --ibd segments.txt \
+  --map input.map \
   --fam individuals.fam \
   --ibd-caller hapibd \
   --map genetic.map \
