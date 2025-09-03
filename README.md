@@ -128,7 +128,7 @@ output:
 
 The format depends on the IBD caller specified:
 
-#### PhaseIBD Format
+#### PhasedIBD Format
 ```
 id1    id2    chromosome    start_cm    end_cm    id1_haplotype    id2_haplotype
 IND1   IND2   1             10.5        25.3      0                0
@@ -194,11 +194,12 @@ In this example, if two 2nd degree individuals have a >25 year age gap, P(MHS) w
 
 ### Basic Analysis
 
-Analyze relationships using PhaseIBD output with default parameters:
+Analyze relationships using PhasedIBD output with default parameters:
 
 ```bash
 python -m ponderosa.cli \
   --ibd segments.txt \
+  --ibd-caller phasedibd \
   --map input.map \
   --fam individuals.fam \
   --output my_results
