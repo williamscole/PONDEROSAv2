@@ -1,4 +1,4 @@
-# PONDEROSA: Relationship Inference from IBD Segments
+# PONDEROSA
 
 PONDEROSA is a Python tool for inferring genetic relationships between individuals using Identity By Descent (IBD) segments. The tool uses machine learning classifiers trained on IBD sharing patterns to distinguish between different degrees of biological relationships.
 
@@ -54,7 +54,7 @@ These arguments specify input and output files:
 | `--config` | Path | No | YAML configuration file |
 | `--ibd` | Path | Yes* | IBD segments file |
 | `--fam` | Path | Yes | PLINK FAM file with individual information |
-| `--ibd-caller` | Choice | No | IBD calling software: `phasedibd`, `hapibd`, `ibdseq` (default: `phasedibd`) |
+| `--ibd-caller` | Choice | No | IBD calling software: `phasedibd`, `hapibd` (default: `phasedibd`) |
 | `--ages` | Path | No | File containing age information for individuals |
 | `--map` | Path | No | Genetic map file for coordinate conversion |
 | `--priors` | Path | No | File specifying relationship priors (e.g., age-based priors) |
@@ -295,7 +295,7 @@ PONDEROSA classifies relationships into hierarchical categories:
 
 - **1st Degree**: Parent-Child (PC), Full Siblings (FS)
 - **2nd Degree**: Grandparent-Grandchild (PGP/MGP), Aunt/Uncle-Niece/Nephew (AV), Half-Siblings (PHS/MHS)
-- **3rd Degree**: First Cousins, Great-Grandparent-Great-Grandchild
+- **3rd Degree**
 - **Unrelated**: Distant or no biological relationship
 
 ## Performance Considerations
@@ -334,11 +334,11 @@ python -m ponderosa.cli -vvv --config config.yaml
 
 If you use PONDEROSA in your research, please cite:
 
-[Citation information will be added upon publication]
+[add citation]
 
 ## License
 
-[License information]
+[add license]
 
 ## Support
 
