@@ -164,14 +164,22 @@ chromosome    position_bp    position_cm
 1             3000000        1.8
 ```
 
-### Priors file
+### Priors File (Optional)
+The priors file allows you to specify age-based relationship constraints. The format is a tab-separated or space-separated file with three columns:
+
 ```
-rel operator  age_gap
-MHS > 25
-GP  <=> 30  
+rel    operator    age_gap
+MHS    >           25
+GP     <=       30
 ```
 
-In this example, if two 2nd degree individuals had a >25 year age gap, P(MHS) would be set to 0 and the other probabilities rescaled.
+**Column Descriptions:**
+- `rel`: Relationship abbreviation (e.g., MHS for maternal half-siblings, GP for grandparent-grandchild)
+- `operator`: Comparison operator (`>`, `<`, `=`, `>=`, `<=`)  
+- `age_gap`: Age difference threshold in years
+
+**Example Usage:**
+In this example, if two 2nd degree individuals have a >25 year age gap, P(MHS) would be set to 0 and the other probabilities rescaled.
 
 ## Examples
 
