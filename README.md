@@ -131,32 +131,37 @@ The format depends on the IBD caller specified:
 #### PhaseIBD Format
 ```
 id1    id2    chromosome    start_cm    end_cm    id1_haplotype    id2_haplotype
-IND1   IND2   1             10.5        25.3      1                1
-IND1   IND3   1             30.1        45.7      2                1
+IND1   IND2   1             10.5        25.3      0                0
+IND1   IND3   1             30.1        45.7      1                0
 ```
 
 #### HapIBD Format  
 ```
-id1    id2    chromosome    start_bp    end_bp    length_cm
-IND1   IND2   1             1000000     2500000   15.2
-IND1   IND3   1             3000000     4200000   12.8
+id1	hap1	id2	hap2	chromosome	start_bp	end_bp	length_cm
+IND1	1	IND2	1	1	1000000	2500000	15.2
+IND1	2	IND3	1	1	3000000	4200000	12.8
 ```
+
+*Actual hapibd file should have no header
 
 ### FAM File (PLINK Format)
 ```
-FAM_ID  IND_ID  FATHER  MOTHER  SEX  PHENOTYPE
+fam_id  ind_id  father  mother  sex  phenotype
 FAM1    IND1    0       0       1    -9
 FAM1    IND2    0       0       2    -9
 FAM2    IND3    0       0       1    -9
+
 ```
+*The actual fam file should have no header
 
 ### Ages File (Optional)
 ```
-individual_id    age
+individual_id    age or year of birth
 IND1            45
 IND2            67
 IND3            32
 ```
+*The actual age file should have no header
 
 ### Genetic Map File (Optional, for HapIBD)
 ```
@@ -165,6 +170,7 @@ chromosome    position_bp    position_cm
 1             2000000        1.2
 1             3000000        1.8
 ```
+*The actual map file should have no header
 
 ### Priors File (Optional)
 The priors file allows you to specify age-based relationship constraints. The format is a tab-separated or space-separated file with three columns:
