@@ -513,6 +513,54 @@ class Pairs:
         data["id2"] = [id2_val]
 
         return pl.DataFrame(data)
+    
+
+class Priors:
+
+    def __init__(self, prior_func: list, prior_args: list):
+        pass
+
+    @classmethod
+    def from_yaml(cls, yaml_file: Path):
+
+        prior_arr = None
+
+        return cls(prior_arr)
+    
+    @classmethod
+    def from_python(cls, python_file: Path):
+
+        prior_arr = None
+
+        return cls(prior_arr)
+    
+    @classmethod
+    def from_txt(cls, txt_file: Path):
+
+        prior_arr = None
+
+        return cls(prior_arr)
+    
+
+def load_priors(config: FilesConfig) -> Priors:
+
+    if config.prior:
+
+        if config.prior.suffix == ".py":
+            priors = Priors.from_python(config.prior)
+
+        elif config.prior.suffix in [".yaml", ".yml"]:
+            priors = Priors.from_yaml(config.prior)
+
+        elif config.prior.suffix == ".txt":
+            priors = Priors.from_txt(config.prior)
+
+    else:
+        priors = Priors([])
+
+    return priors
+
+
 
 
 def load_individuals(config: FilesConfig) -> Individuals:

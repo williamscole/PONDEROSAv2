@@ -19,6 +19,7 @@ def create_parser():
                             default='phasedibd', help='IBD calling software', dest='ibd_caller',)
     files_group.add_argument('--ages', type=Path, help='Ages file')
     files_group.add_argument('--map', type=Path, help='Genetic map file', dest="mapf")
+    files_group.add_argument("--priors", type=Path, help="File specifying priors (e.g., age priors)")
     files_group.add_argument('--populations', type=Path, help='Populations file')
     files_group.add_argument('--training', type=Path, help='Training models directory')
     

@@ -41,6 +41,7 @@ class FilesConfig:
     populations: Optional[Path] = None
     training: Optional[Path] = None
     rel_tree: Optional[Path] = None
+    priors: Optional[Path] = None
 
     mapf: Optional[Path] = None
     map_files: Optional[List[Path]] = None
@@ -93,7 +94,7 @@ class FilesConfig:
         self._map_file_list = self._validate_file_lists(self.mapf, self.map_files, "map")
         
         # Check optional files if provided
-        optional_files = [self.ages, self.mapf, self.populations, self.training]
+        optional_files = [self.ages, self.mapf, self.populations, self.training, self.priors]
         for file_path in optional_files:
             if file_path and not file_path.exists():
                 logger.warning(f"Optional file not found: {file_path}")
