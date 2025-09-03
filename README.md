@@ -137,9 +137,10 @@ IND1   IND3   1             30.1        45.7      1                0
 
 #### HapIBD Format  
 ```
-id1	hap1	id2	hap2	chromosome	start_bp	end_bp	length_cm
-IND1	1	IND2	1	1	1000000	2500000	15.2
-IND1	2	IND3	1	1	3000000	4200000	12.8
+id1    id1_haplotype    id2    id2_haplotype    chromosome    start_bp    end_bp    length_cm
+IND1   1                IND2   2                1             1000000     2500000   15.2
+IND1   2                IND3   1                1             3000000     4200000   12.8
+IND2   1                IND4   2                2             5000000     7800000   18.5
 ```
 
 *Actual hapibd file should have no header
