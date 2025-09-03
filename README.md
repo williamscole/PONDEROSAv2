@@ -52,16 +52,15 @@ These arguments specify input and output files:
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
 | `--config` | Path | No | YAML configuration file |
-| `--ibd` | Path | Yes* | IBD segments file |
+| `--ibd` | Path | Yes | IBD segments file |
 | `--fam` | Path | Yes | PLINK FAM file with individual information |
-| `--ibd-caller` | Choice | No | IBD calling software: `phasedibd`, `hapibd` (default: `phasedibd`) |
+| `--ibd-caller` | Choice | Yes | IBD calling software: `phasedibd`, `hapibd` |
+| `--map` | Path | Yes | Genetic map file for coordinate conversion |
 | `--ages` | Path | No | File containing age information for individuals |
-| `--map` | Path | No | Genetic map file for coordinate conversion |
 | `--priors` | Path | No | File specifying relationship priors (e.g., age-based priors) |
 | `--populations` | Path | No | Population assignment file |
 | `--training` | Path | No | Directory containing pre-trained models |
 
-*Required unless specified in config file
 
 ### Algorithm Arguments
 
@@ -164,6 +163,15 @@ chromosome    position_bp    position_cm
 1             2000000        1.2
 1             3000000        1.8
 ```
+
+### Priors file
+```
+rel operator  age_gap
+MHS > 25
+GP  <=> 30  
+```
+
+In this example, if two 2nd degree individuals had a >25 year age gap, P(MHS) would be set to 0 and the other probabilities rescaled.
 
 ## Examples
 
