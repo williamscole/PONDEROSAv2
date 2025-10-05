@@ -47,6 +47,14 @@ class PedSim:
 
         return self.path / f"{self.prefix}{suffix}"
 
+    def get_input(self, file_type):
+
+        file_types = {"vcf": "-i"}
+
+        assert file_type in file_types
+
+        return self.flags[file_types[file_type]]
+
 
     # @classmethod
     # def from_config(cls, config: SimulationConfig):
