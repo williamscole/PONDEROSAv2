@@ -6,6 +6,7 @@ import random
 import pandas as pd
 import polars as pl
 from typing import Union, List, Tuple, Dict
+from pathlib import Path
 from ponderosa.data_loading import load_ibd_from_file, GeneticMap, FamFile
 from ponderosa.simulation.pedsim import PedSim
 
@@ -47,6 +48,29 @@ def calculate_relatedness(
     }
 
     return relatedness_dict
+
+
+class Relatedness:
+
+    def __init__(self, relatedness_dict: dict):
+
+        self.rel = relatedness_dict
+
+    @classmethod
+    def from_ibd(cls, ibd_file: Union[str, Path], ibd_caller: str, genetic_map_file_list: List[str]):
+
+        rel_dict = calculate_relatedness(ibd_file, ibd_caller, genetic_map_file_list)
+
+        return cls({i: j / 2 for i, j in rel_dict.items()})
+    
+    @classmethod
+    def from_king(cls, king_file: Union[str, Path]):
+
+        king_df = pd.read_csv(king_file, sep="\\s+")
+
+        return cls({(row.ID1, row.ID2): row.PropIBD for row in king_df.itertuples()})
+
+
 
 #should return nested families from the dryrun [[“A”,”B”,”C”],[“D”,”E”,”F”]]
 def pedsim_dryrun(

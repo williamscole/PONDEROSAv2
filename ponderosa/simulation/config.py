@@ -126,7 +126,6 @@ class SimulationConfig:
     # Processing settings
     ibd_caller: str = "hap-ibd.sh"  # Bash script for IBD calling
     output_path: str = "ponderosa_simulation"  # Output directory/prefix
-    temp_dir: Optional[Path] = None  # Temporary directory location
     cleanup_temp: bool = True  # Whether to clean up temporary files
     
     @classmethod
