@@ -5,12 +5,18 @@ Script for choosing the founders of the simulation
 import random
 import pandas as pd
 import polars as pl
+import numpy as np
+import itertools as it
 from typing import Union, List, Tuple, Dict
 from pathlib import Path
 from ponderosa.data_loading import load_ibd_from_file, GeneticMap, FamFile
 from ponderosa.simulation.pedsim import PedSim
 
-def calculate_relatedness(
+
+########    Methods for computing kinship      ########
+########    from KING files, IBD files, etc.   ########
+
+def relatedness_from_ibd(
     ibd_file: List[str],
     ibd_caller: str,
     genetic_map_file_list: List[str],
@@ -42,33 +48,53 @@ def calculate_relatedness(
         )
     )
 
+    # Factor of 2 is to get it in the same scale as KING
     relatedness_dict = {
-        (row["id1"], row["id2"]): row["relatedness_coefficient"]
+        (row["id1"], row["id2"]): row["relatedness_coefficient"] / 2
         for row in related_summary.to_dicts()
     }
 
     return relatedness_dict
 
+def relatedness_from_king(king_file: Union[str, Path]) -> Dict[Tuple[str, str], float]:
 
-class Relatedness:
+    king_df = pd.read_csv(king_file, sep="\\s+")
 
-    def __init__(self, relatedness_dict: dict):
+    return {(row.ID1, row.ID2): row.PropIBD for row in king_df.itertuples()}
 
-        self.rel = relatedness_dict
+######## Methods for sampling   ########
+######## unrelated individuals  ########
+class SampleRelatives:
 
-    @classmethod
-    def from_ibd(cls, ibd_file: Union[str, Path], ibd_caller: str, genetic_map_file_list: List[str]):
+    def __init__(self, relatedness_dict: dict, sample_list: Union[list, np.ndarray] = None):
 
-        rel_dict = calculate_relatedness(ibd_file, ibd_caller, genetic_map_file_list)
+        self.kinship = relatedness_dict
 
-        return cls({i: j / 2 for i, j in rel_dict.items()})
-    
-    @classmethod
-    def from_king(cls, king_file: Union[str, Path]):
+        # Should supply a sample list! May miss out on unrelated indviduals
+        if sample_list:
+            self.samples = np.array(sample_list)
+        else:
+            samples = list(it.chain(*relatedness_dict.keys()))
+            self.samples = np.array(set(samples))
 
-        king_df = pd.read_csv(king_file, sep="\\s+")
+    def set_mode(self, mode: str, **kwargs):
 
-        return cls({(row.ID1, row.ID2): row.PropIBD for row in king_df.itertuples()})
+        self.mode = mode
+
+        if mode == "simple":
+            assert "max_k" in kwargs
+
+            # TODO: create kinship graph here!
+
+            self.max_k = kwargs["max_k"]
+
+    def get_unrelated_family(self, n_members: int):
+
+        assert self.mode == "simple"
+
+
+
+
 
 
 

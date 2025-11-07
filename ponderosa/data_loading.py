@@ -533,9 +533,18 @@ class Priors:
         prior_arr = None
 
         return cls(prior_arr)
-    
+        
     @classmethod
     def from_txt(cls, txt_file: Path):
+
+        df = pd.read_csv(txt_file, delim_whitespace=True)
+
+        for prior_type, priors in df.groupby("type"):
+
+            if prior_type == "age_gap":
+                lambdas
+
+
 
         prior_arr = None
 
