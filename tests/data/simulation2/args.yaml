@@ -1,0 +1,102 @@
+# PONDEROSA Simulation Configuration Template
+# This file configures the simulation workflow for generating training data
+# and training relationship classification models.
+
+# ==============================================================================
+# PED-SIM CONFIGURATION (Required)
+# ==============================================================================
+pedsim:
+  # Path to directory containing ped-sim executable
+  pedsim_path: "tests/data/ped-sim"
+  
+  # Input VCF file with founder genotypes (can be .vcf or .vcf.gz)
+  vcf_file: "tests/data/simulation1/founders.vcf.gz"
+  
+  # Optional: Sex-specific genetic recombination map
+  # If not provided, will auto-detect: {pedsim_path}/refined_mf.simmap
+  simmap_file: null
+  
+  # Optional: Interference file for crossover interference modeling
+  # If not provided, will auto-detect: {pedsim_path}/interfere/nu_p_campbell.tsv
+  interference_file: null
+  
+  # Optional: Pedigree definition file (.def format)
+  # If not provided, will use: ponderosa/config/default.def
+  def_file: null
+  
+  # Optional: Random seed for reproducible simulations
+  random_seed: null
+
+# ==============================================================================
+# FOUNDER SELECTION (Required)
+# ==============================================================================
+# KING output file for selecting unrelated founders
+king_file: "tests/data/simulation1/king.seg"
+
+# ==============================================================================
+# TRAINING CONFIGURATION (Optional)
+# ==============================================================================
+training:
+  # Number of simulated pairs per relationship type
+  # Higher values = better training but slower simulation
+  n_pairs_per_relationship: 5
+  
+  # Maximum kinship coefficient allowed between founders in same family
+  # Ensures founders are sufficiently unrelated (0 = unrelated, 0.5 = parent-child)
+  max_kinship: 0.05
+
+# ==============================================================================
+# PROCESSING SETTINGS (Optional)
+# ==============================================================================
+# IBD caller bash script name (must be in PATH or provide full path)
+ibd_caller: "hap-ibd.sh"
+
+# Output directory/prefix for simulation results
+# Will contain: trained models, simulated data, intermediate files
+# Example output: {output_path}_trained_models.pkl
+output_path: "tests/data/simulation1/out"
+
+# Whether to clean up temporary files after simulation completes
+cleanup_temp: true
+
+# ==============================================================================
+# EXAMPLE CONFIGURATIONS
+# ==============================================================================
+
+# --- Minimal Configuration ---
+# pedsim:
+#   pedsim_path: "/home/user/ped-sim"
+#   vcf_file: "/data/1000G_founders.vcf.gz"
+# king_file: "/data/1000G_kinship.seg"
+
+# --- Full Configuration with Custom Settings ---
+# pedsim:
+#   pedsim_path: "/home/user/ped-sim"
+#   vcf_file: "/data/my_founders.vcf.gz"
+#   simmap_file: "/data/custom_recombination.simmap"
+#   interference_file: "/data/custom_interference.tsv"
+#   def_file: "/data/custom_pedigrees.def"
+#   random_seed: 42
+# 
+# king_file: "/data/my_kinship.seg"
+# 
+# training:
+#   n_pairs_per_relationship: 200
+#   max_kinship: 0.03
+# 
+# ibd_caller: "/usr/local/bin/hap-ibd.sh"
+# output_path: "/results/my_simulation"
+# temp_dir: "/scratch/temp"
+# cleanup_temp: false
+
+# ==============================================================================
+# USAGE
+# ==============================================================================
+# Save this file as: simulation_config.yaml
+# Run simulation:
+#   python -m ponderosa simulate simulation_config.yaml
+#
+# Output will include:
+#   - {output_path}_trained_models.pkl    (trained classifiers for PONDEROSA)
+#   - {output_path}_simulation_data/      (simulated VCF, IBD segments, etc.)
+#   - Logs and intermediate files
