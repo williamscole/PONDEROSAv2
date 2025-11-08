@@ -12,6 +12,19 @@ from ponderosa.simulation.setup import simulation_workspace, _symlink_files
 from ponderosa.simulation.founders import calculate_relatedness, simple_family_sample, pedsim_dryrun, create_founders_file, relatedness_from_king, get_simple_graph
 from ponderosa.simulation.simulate import _get_vcf_samples
 
+@pytest.fixture(scope="session")
+def scratch_dir():
+    """Fixed scratch directory that's cleaned at the start of each test session"""
+    scratch = Path("/oscar/scratch/cwilli50/simulations")
+    
+    # Clean everything in the directory at the start
+    if scratch.exists():
+        shutil.rmtree(scratch)
+    
+    scratch.mkdir(parents=True, exist_ok=True)
+    
+    yield scratch
+
 def get_sim_file(sim_number: int, which_file: str):
 
     files = {
