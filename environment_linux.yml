@@ -1,0 +1,20 @@
+name: ponderosa_v2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13
+  - numpy>=2.3
+  - pandas>=2.3
+  - polars>=1.32
+  - scikit-learn>=1.7
+  - scipy>=1.16
+  - networkx>=3.5
+  - pyyaml>=6.0
+  - pytest>=8.4
+  - ipdb>=0.13
+  - joblib>=1.5
+  - matplotlib-inline
+  - pip
+  - pip:
+      - pyarrow>=21.0
