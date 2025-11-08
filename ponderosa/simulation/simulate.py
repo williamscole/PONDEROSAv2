@@ -55,7 +55,7 @@ def simulate(config: SimulationConfig) -> PonderosaConfig:
         
         # 6. Write founders file
         founders_file = temp_dir / "founders.txt"
-        founders_df.to_csv(founders_file, sep="\t", index=False)
+        founders_df.to_csv(founders_file, sep="\t", index=False, header=False)
         
         # 7. Update PedSim with founders and execute
         pedsim.update_flag("--set_founders", str(founders_file))

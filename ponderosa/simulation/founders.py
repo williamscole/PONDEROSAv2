@@ -6,6 +6,7 @@ import random
 import pandas as pd
 import polars as pl
 import numpy as np
+import networkx as nx
 import itertools as it
 from typing import Union, List, Tuple, Dict
 from pathlib import Path
@@ -62,8 +63,46 @@ def relatedness_from_king(king_file: Union[str, Path]) -> Dict[Tuple[str, str], 
 
     return {(row.ID1, row.ID2): row.PropIBD for row in king_df.itertuples()}
 
+def calculate_relatedness():
+    pass
+
+class Relatedness:
+    pass
+
 ######## Methods for sampling   ########
 ######## unrelated individuals  ########
+
+####### For simple unrelated sampling
+def get_simple_graph(nodes: List[str], relatedness_dict: dict, max_k: float) -> nx.Graph:
+    # Initialize the graph
+    G = nx.Graph()
+    G.add_nodes_from(nodes) # Add the nodes
+
+    # Now susbset to only edges between sufficiently related individuals
+    edge_list = [pair for pair, k in relatedness_dict.items() if k > max_k]
+    G.add_edges_from(edge_list) # Add the edges between "related"
+
+    return G
+
+def simple_family_sample(G: nx.Graph, n_members: int):
+    for _ in range(100): # Give it 100 attempts
+        g = G.copy()
+        nodes = g.nodes()
+        out_fam = [] # Stores the IDs of the founders
+        for _ in range(n_members):
+            new_node = np.random.choice(list(nodes))
+            out_fam.append(str(new_node))
+            nodes = nodes - {new_node} - set(g.neighbors(new_node))
+            if len(nodes) == 0:
+                break
+            g = g.subgraph(nodes)
+
+        if len(out_fam) == n_members:
+            return out_fam
+        
+    return set()
+
+
 class SampleRelatives:
 
     def __init__(self, relatedness_dict: dict, sample_list: Union[list, np.ndarray] = None):
@@ -77,6 +116,8 @@ class SampleRelatives:
             samples = list(it.chain(*relatedness_dict.keys()))
             self.samples = np.array(set(samples))
 
+        self.graph = nx.Graph()
+
     def set_mode(self, mode: str, **kwargs):
 
         self.mode = mode
@@ -84,16 +125,21 @@ class SampleRelatives:
         if mode == "simple":
             assert "max_k" in kwargs
 
-            # TODO: create kinship graph here!
-
             self.max_k = kwargs["max_k"]
 
-    def get_unrelated_family(self, n_members: int):
+            self.graph = get_simple_graph(self.kinship,
+                                          self.samples,
+                                          self.max_k)
 
-        assert self.mode == "simple"
+    def get_unrelated_founders(self, n_members: int):
 
+        if self.mode == "simple":
+            fam = simple_family_sample(self.g, n_members)
 
-
+        # Ensure that a founder family was found
+        assert len(fam) == n_members
+        
+        return fam
 
 
 
@@ -116,8 +162,10 @@ def create_founders_file(
     vcf_samples: List[str],
     dry_run_families: List[List[str]],
     relatedness_dict: Dict[Tuple[str, str], float],
-    r: float,
-    n: int
+    max_k: float,
+    n: int,
+    mode: str = "simple",
+    **kwargs
 ) -> pd.DataFrame:
     """
     Generate a founders mapping file by assigning VCF samples to simulated pedigrees.
@@ -133,27 +181,19 @@ def create_founders_file(
         pd.DataFrame with columns: dry_run_id, vcf_id
     """
 
-    def are_unrelated(selected: List[str], candidate: str) -> bool:
-        """Check candidate against all already selected samples for relatedness ≤ r."""
-        for s in selected:
-            # lookup both (s, candidate) and (candidate, s) since dict might not be symmetric
-            rel = relatedness_dict.get((s, candidate)) or relatedness_dict.get((candidate, s)) or 0.0
-            if rel > r:
-                return False
-        return True
+    sampling = SampleRelatives(relatedness_dict, vcf_samples)
+
+    # TODO implement other modes and ar
+    if mode == "simple":
+        assert "max_k" in kwargs
+        sampling.set_mode("simple", max_k=max_k)
 
     assignments = []
 
     for fam in dry_run_families:
         for _ in range(n):
-            chosen = []
-            for person in fam:
-                # Try to pick a sample that is unrelated to already chosen samples
-                possible = [s for s in vcf_samples if s not in chosen and are_unrelated(chosen, s)]
-                if not possible:
-                    raise ValueError(f"Could not find unrelated sample for {person} in family {fam}")
-                selected = random.choice(possible)
-                chosen.append(selected)
-                assignments.append({"dry_run_id": person, "vcf_id": selected})
+            founders = sampling.get_unrelated_founders(len(fam))
+            for sim_id, founder_id in zip(fam, founders):
+                assignments.append([sim_id, founder_id])
 
-    return pd.DataFrame(assignments)
+    return pd.DataFrame(assignments, columns=["sim_id", "founder_id"])
