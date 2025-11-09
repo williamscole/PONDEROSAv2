@@ -4,15 +4,36 @@ from pathlib import Path
 # from config import SimulationConfig
 
 class PedSim:
+    DEFAULTS = {
+        ".vcf": "input.vcf",
+        ".vcf.gz": "input.vcf.gz",
+        "def": "pedigree.def",
+        "intf": "interference.tsv",
+        "map": "input.simmap"
+    }
 
     def __init__(self,
-                 vcf_file: str,
-                 def_file: str,
-                 intf_file: str,
-                 map_file: str,
-                 output: str,
-                 executable_path: str,
-                 founder_file: str = None):
+                executable_path: str,
+                output: Path,
+                vcf_ext: str = None,
+                vcf_file: str = None,
+                def_file: str = None,
+                intf_file: str = None,
+                map_file: str = None,
+                founder_file: str = None):
+
+
+        self.output = output
+        self.prefix = output.name
+        self.path = output.parent
+
+        self.executable = executable_path
+
+        if vcf_file is None:
+            vcf_file = self.path / self.DEFAULTS[vcf_ext]
+            def_file = self.path / self.DEFAULTS["def"]
+            map_file = self.path / self.DEFAULTS["map"]
+            intf_file = self.path / self.DEFAULTS["intf"]
         
         self.flags = {
             "-i": vcf_file,
@@ -23,13 +44,7 @@ class PedSim:
             "-o": output
         }
 
-        self.executable = executable_path
-
-        output = Path(output).parent
-        self.path = output.parent
-        self.prefix = output.name
-
-
+        
     def update_flag(self, flag, arg):
         assert flag in self.flags
 
@@ -45,7 +60,7 @@ class PedSim:
             "fam": "-everyone.fam"
         }
 
-        return self.path / f"{self.prefix}{suffix}"
+        return self.path / f"{self.prefix}{suffix[file_type]}"
 
     def get_input(self, file_type):
 

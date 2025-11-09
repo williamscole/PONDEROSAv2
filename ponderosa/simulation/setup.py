@@ -94,7 +94,7 @@ def _symlink_files(temp_dir: Path, config: SimulationConfig):
         
     Creates symlinks:
         - input.vcf or input.vcf.gz -> VCF file
-        - input.map -> Genetic map file
+        - input.simmmap -> Genetic map file
         - interference.tsv -> Crossover interference file
         - pedigree.def -> Pedigree definition file
     
@@ -112,7 +112,7 @@ def _symlink_files(temp_dir: Path, config: SimulationConfig):
             "required": True,
             "description": "VCF file with founder genotypes"
         },
-        "input.map": {
+        "input.simmap": {
             "source": config.pedsim.simmap_file,
             "required": True,
             "description": "genetic map file"
@@ -217,7 +217,7 @@ def _validate_simulation_files(temp_dir: Path, config: SimulationConfig):
     # Check required files
     required_files = {
         "pedigree.def": "pedigree definitions for simulation",
-        "input.map": "genetic map for recombination",
+        "input.simmap": "genetic map for recombination",
         "interference.tsv": "crossover interference parameters",
     }
     

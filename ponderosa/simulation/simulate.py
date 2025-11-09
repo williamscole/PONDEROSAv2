@@ -25,7 +25,7 @@ def simulate(config: SimulationConfig) -> PonderosaConfig:
         pedsim = PedSim(
             vcf_file=str(temp_dir / f"input{vcf_ext}"),  # Use dynamic extension
             def_file=str(temp_dir / "pedigree.def"),
-            intf_file=str(temp_dir / "interference.txt"),
+            intf_file=str(temp_dir / "interference.tsv"),
             map_file=str(temp_dir / "input.map"),
             output=str(temp_dir / "simulation"),
             executable_path=str(config.pedsim.pedsim_executable),
@@ -49,8 +49,8 @@ def simulate(config: SimulationConfig) -> PonderosaConfig:
             vcf_samples=vcf_samples,
             dry_run_families=dry_run_families,
             relatedness_dict=relatedness_dict,
-            r=config.training.max_kinship,
-            n=config.training.n_pairs_per_relationship
+            max_k=config.training.max_kinship,
+            n_sim=config.training.n_pairs_per_relationship
         )
         
         # 6. Write founders file

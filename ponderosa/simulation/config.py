@@ -68,8 +68,8 @@ class PedSimConfig:
     @property
     def pedsim_executable(self) -> Path:
         """Path to ped-sim executable."""
-        return self.pedsim_path / "ped-sim"
-    
+        return (self.pedsim_path / "ped-sim").resolve()
+        
     def validate(self) -> None:
         """Validate ped-sim configuration."""
         

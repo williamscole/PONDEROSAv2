@@ -8,6 +8,7 @@ import polars as pl
 import numpy as np
 import networkx as nx
 import itertools as it
+import re
 from typing import Union, List, Tuple, Dict
 from pathlib import Path
 from ponderosa.data_loading import load_ibd_from_file, GeneticMap, FamFile
@@ -127,14 +128,14 @@ class SampleRelatives:
 
             self.max_k = kwargs["max_k"]
 
-            self.graph = get_simple_graph(self.kinship,
-                                          self.samples,
+            self.graph = get_simple_graph(self.samples,
+                                          self.kinship,
                                           self.max_k)
 
     def get_unrelated_founders(self, n_members: int):
 
         if self.mode == "simple":
-            fam = simple_family_sample(self.g, n_members)
+            fam = simple_family_sample(self.graph, n_members)
 
         # Ensure that a founder family was found
         assert len(fam) == n_members
@@ -158,13 +159,16 @@ def pedsim_dryrun(
     return fam.get_founders()
 
 
+def update_fam_idx(sim_id, idx):
+    return re.sub(r'(?<!\d)1(?!\d)', str(idx), sim_id, count=1)
+
 def create_founders_file(
     vcf_samples: List[str],
     dry_run_families: List[List[str]],
     relatedness_dict: Dict[Tuple[str, str], float],
-    max_k: float,
-    n: int,
+    n_sim: int,
     mode: str = "simple",
+    max_k: float = None,
     **kwargs
 ) -> pd.DataFrame:
     """
@@ -175,7 +179,7 @@ def create_founders_file(
         dry_run_families: list of families (each family is a list of IDs, e.g. [["A","B","C"], ["D","E"]])
         relatedness_dict: dict {(id1, id2): relatedness coefficient}
         r: relatedness threshold for founders
-        n: number of simulated pedigrees per family
+        n_sim: number of simulated pedigrees per family
 
     Returns:
         pd.DataFrame with columns: dry_run_id, vcf_id
@@ -185,15 +189,19 @@ def create_founders_file(
 
     # TODO implement other modes and ar
     if mode == "simple":
-        assert "max_k" in kwargs
+        assert max_k is not None
         sampling.set_mode("simple", max_k=max_k)
 
     assignments = []
 
     for fam in dry_run_families:
-        for _ in range(n):
+        for i in range(n_sim):
             founders = sampling.get_unrelated_founders(len(fam))
-            for sim_id, founder_id in zip(fam, founders):
-                assignments.append([sim_id, founder_id])
+            for sim_id, sample_id in zip(fam, founders):
+                assignments.append([sim_id, sample_id, i+1])
 
-    return pd.DataFrame(assignments, columns=["sim_id", "founder_id"])
+    founder_df = pd.DataFrame(assignments, columns=["sim_id", "sample_id", "fam_idx"])
+    
+    founder_df["sim_id"] = founder_df.apply(lambda x: update_fam_idx(x.sim_id, x.fam_idx), axis=1)
+
+    return founder_df.drop("fam_idx", axis=1)
